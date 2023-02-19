@@ -6,7 +6,7 @@ import useForm from '../hooks/useForm';
 function AddPlacePopup(props) {
 
 
-    const {values, handleChange, setValues} = useForm({});
+    const {values, handleChange} = useForm({});
 
     function handleSubmit(e) {
         e.preventDefault();
