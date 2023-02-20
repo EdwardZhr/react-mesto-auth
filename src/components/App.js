@@ -4,7 +4,7 @@ import Footer from './Footer';
 import PopupWithForm from './PopupWithForm';
 import ImagePopup from './ImagePopup';
 import EditProfilePopup from './EditProfilePopup';
-import React from 'react';
+import {useEffect, useState} from 'react';
 import api from '../utils/Api';
 import CurrentUserContext from '../contexts/CurrentUserContext';
 import EditAvatarPopup from './EditAvatarPopup';
@@ -19,30 +19,57 @@ import { InfoTooltip } from './InfoTooltip';
 
 function App() {
 
-    const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = React.useState(false);
-    const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = React.useState(false);
-    const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = React.useState(false);
-    const [isInfoTooltipOpen, setIsInfoTooltipOpen] = React.useState(false);
-    const [selectedCard,  setSelectedCard] = React.useState({name: '', link: ''});
-    const [currentUser,  setCurrentUser] = React.useState({about: '', avatar: '', cohort: '', name: '', _id: ''});
-    const [cards, setCards] = React.useState([]);
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [loggedIn, setLoggedIn] = React.useState(false);
-    const [email, setEmail] = React.useState('');
-    const [toolTipStatus, setToolTipStatus] = React.useState('')
+    const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = useState(false);
+    const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = useState(false);
+    const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = useState(false);
+    const [isInfoTooltipOpen, setIsInfoTooltipOpen] = useState(false);
+    const [selectedCard,  setSelectedCard] = useState({name: '', link: ''});
+    const [currentUser,  setCurrentUser] = useState({about: '', avatar: '', cohort: '', name: '', _id: ''});
+    const [cards, setCards] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loggedIn, setLoggedIn] = useState(false);
+    const [email, setEmail] = useState('');
+    const [toolTipStatus, setToolTipStatus] = useState('')
 
     const location = useLocation()
     const navigate = useNavigate();
 
-    const handleLogin = () => {
-        setLoggedIn(true);
+    const handleLogin = (password, email) => {
+        auth.authorize(password, email)
+        .then((data) => {
+            if (data.token){
+            setLoggedIn(true);
+            setEmail(email);
+            navigate('/', {replace: true});
+        }
+      })
+        .catch(err => {
+            handleToolTipStatus('error')
+            handleInfoTooltipOpen()
+        } );
       }
 
-    React.useEffect(() => {
+    const handleRegister = (password, email) => {
+        auth.register(password, email)
+        .then((res) => {
+            navigate('/sign-in', {replace: true});
+            handleToolTipStatus('ok');
+            handleInfoTooltipOpen(true);
+            })
+        .catch(err => {
+            handleToolTipStatus('error')
+            handleInfoTooltipOpen()
+        });
+      }  
+
+    useEffect(() => {
         handleTokenCheck();
       }, [loggedIn])
 
-    React.useEffect(() => {
+    useEffect(() => {
+        if (!loggedIn) {
+            return
+        }
         api.getProfile()
         .then((profileData)=>{ 
             setCurrentUser(profileData);
@@ -51,9 +78,12 @@ function App() {
           console.log(err);
       });
   
-      }, [])
+      }, [loggedIn])
       
-      React.useEffect(() => {
+      useEffect(() => {
+        if (!loggedIn) {
+            return
+        }
         api.getInitialCards()
         .then((initialCards)=>{
   
@@ -63,17 +93,20 @@ function App() {
           console.log(err);
       });
   
-      }, [])
+      }, [loggedIn])
 
     const handleTokenCheck = () => {
-        if (localStorage.getItem('token')){
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token'); 
+        if (token){
         auth.checkToken(token).then((res) => {
             if (res){
             setLoggedIn(true);
             setEmail(res.data.email);
             navigate("/", {replace: true})
             }
+        })
+        .catch((err)=>{ 
+            console.log(err);
         });
         }
     }
@@ -104,7 +137,7 @@ function App() {
 
     const isOpen = isEditAvatarPopupOpen || isEditProfilePopupOpen || isAddPlacePopupOpen || selectedCard.link
 
-    React.useEffect(() => {
+    useEffect(() => {
       function closeByEscape(evt) {
         if(evt.key === 'Escape') {
           closeAllPopups();
@@ -200,8 +233,8 @@ function App() {
                             onEditProfile={handleEditProfileClick} 
                             onAddPlace={handleAddPlaceClick} 
                             onEditAvatar={handleEditAvatarClick}/>}  />
-                        <Route path="/sign-up" element={<Register handleToolTipStatus={handleToolTipStatus} handleInfoTooltipOpen={handleInfoTooltipOpen}/>} />
-                        <Route path="/sign-in" element={<Login handleToolTipStatus={handleToolTipStatus} handleLogin={handleLogin} handleInfoTooltipOpen={handleInfoTooltipOpen}/> } />
+                        <Route path="/sign-up" element={<Register handleRegister={handleRegister}/>} />
+                        <Route path="/sign-in" element={<Login handleLogin={handleLogin} /> } />
                     </Routes>     
                     
                     <Footer />
